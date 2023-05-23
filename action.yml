@@ -1,0 +1,85 @@
+name: 'AppLambda'
+description: 'Deploy lambda with terraform'
+inputs:
+  app-name:
+    description: 'Applcation id'
+    required: true
+  aws-role:
+    description: 'Aws role to apply changes'
+    required: true
+  aws-region:
+    description: 'Aws region'
+    default: 'eu-central-1'
+  terraform-version:
+    description: 'Terraform version to install.'
+    default: 'latest'
+  terragrunt-version:
+    description: 'Terragrunt version to install.'
+    default: 'latest'
+  terraform-lambda-repo:
+    description: 'terraform lambda repository'
+    default: 'FinalCAD/terraform-lambdas'
+  terraform-lambda-ref:
+    descrition: 'Ref to use for pulling repo terraform-lambdas'
+    default: 'master'
+  gitub-token:
+    description: 'Github token to pull package to avoid limit rate'
+    default: ''
+  github-ssh:
+    description: 'Github ssh key to pull terragrunt from github api'
+    required: true
+  environment:
+    description: 'Finalcad environment: production, staging, sandbox'
+    require: true
+  region-friendly:
+    description: 'Finalcad region: frankfurt or tokyo'
+    default: 'frankfurt'
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        path: 'lambda'
+    - uses: actions/checkout@v3
+      with:
+        ssh-key: ${{ inputs.github-ssh }}
+        repository: ${{ inputs.terraform-lambda-repo }}
+        ref: ${{ inputs.terraform-lambda-ref }}
+        path: 'terragrunt'
+    # Setup ssh key
+    - name: Add ssh key
+      shell: bash
+      run: |
+          mkdir -p ~/.ssh
+          echo "${{ inputs.github-ssh }}" > ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_rsa ~/.ssh/known_hosts
+          eval $(ssh-agent)
+          ssh-add ~/.ssh/id_rsa
+    # Setup terraform
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        terraform_wrapper: false
+    # Setup terragrunt
+    - name: Terragrunt Binary Installer Action
+      uses: autero1/action-terragrunt@v1.3.0
+      if: inputs.terragrunt-version != 'disabled'
+      with:
+        terragrunt_version: ${{ inputs.terragrunt-version }}
+        token: ${{ inputs.gitub-token }}
+    # Configure aws credentials
+    - name: Configure AWS credentials for security
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-region: ${{ inputs.aws-region }}
+        role-to-assume: ${{ inputs.aws-role }}
+        role-session-name: OIDCSession
+    # Apply terragrunt
+    - name: Terragrunt apply
+      shell: bash
+      run: |
+        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/${{ inputs.app-name }}
+        terrgrunt init
+        terragrunt apply -auto-approve
