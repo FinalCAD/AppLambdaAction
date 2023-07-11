@@ -92,7 +92,7 @@ runs:
         pip3 install virtualenv
         echo "Preparing archive..."
         bash ./lambda/${{ inputs.sub-path }}/prepare_archive.sh
-        cp ./function.zip ./terragrunt/modules/custom/lambda_prerequisite/.
+        cp ./lambda/${{ inputs.sub-path }}/function.zip ./terragrunt/modules/custom/lambda_prerequisite/.
     # Setup terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
