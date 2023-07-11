@@ -118,8 +118,8 @@ runs:
     - name: Terragrunt apply
       shell: bash
       run: |
-        cp ./lambda/.finalcad/${{ inputs.configuration-file }} ./terragrunt/lambda.yaml
-        cp ./lambda/.finalcad/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json
+        cp ./lambda/${{ inputs.configuration-file }} ./terragrunt/lambda.yaml
+        cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
         export TF_VAR_region_friendly=${{ inputs.region-friendly }}
         export TF_VAR_application_id=${{ inputs.app-name }}
