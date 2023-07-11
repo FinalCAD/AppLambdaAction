@@ -46,6 +46,9 @@ inputs:
   pr-number:
     description: 'Pull rerquest number, empty fo push'
     default: ''
+  python-version:
+    description: 'Python version to construct python zip'
+    default: '3.10'
 runs:
   using: 'composite'
   steps:
@@ -62,25 +65,33 @@ runs:
     - name: Add ssh key
       shell: bash
       run: |
-          mkdir -p ~/.ssh
-          echo "${{ inputs.github-ssh }}" > ~/.ssh/id_rsa
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/id_rsa ~/.ssh/known_hosts
-          eval $(ssh-agent)
-          ssh-add ~/.ssh/id_rsa
-    - name: test
-      shell: bash
-      run: |
-        pwd
-        tree
-    - name: Add custom layer
+        mkdir -p ~/.ssh
+        echo "${{ inputs.github-ssh }}" > ~/.ssh/id_rsa
+        ssh-keyscan github.com >> ~/.ssh/known_hosts
+        chmod 600 ~/.ssh/id_rsa ~/.ssh/known_hosts
+        eval $(ssh-agent)
+        ssh-add ~/.ssh/id_rsa
+    - name: Detectr Python archive
+      id: python_archive
       shell: bash
       run: |
         if [ -f ./lambda/${{ inputs.sub-path }}/prepare_archive.sh ]; then
-          echo "Preparing archive..."
-          bash ./lambda/${{ inputs.sub-path }}/prepare_archive.sh
-          cp ./function.zip ./terragrunt/modules/custom/lambda_prerequisite/.
+          echo "python_archive=true" >> $GITHUB_OUTPUT
+        else
+          echo "python_archive=false" >> $GITHUB_OUTPUT
         fi
+    - name: Set up Python
+      if: steps.python_archive.outputs.python_archive == 'true'
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Add custom layer
+      if: steps.python_archive.outputs.python_archive == 'true'
+      shell: bash
+      run: |
+        echo "Preparing archive..."
+        bash ./lambda/${{ inputs.sub-path }}/prepare_archive.sh
+        cp ./function.zip ./terragrunt/modules/custom/lambda_prerequisite/.
     # Setup terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
