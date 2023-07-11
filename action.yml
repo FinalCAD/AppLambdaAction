@@ -72,6 +72,7 @@ runs:
       shell: bash
       run: |
         pwd
+        tree
     - name: Add custom layer
       shell: bash
       run: |
