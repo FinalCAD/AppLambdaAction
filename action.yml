@@ -85,14 +85,11 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
-    - name: Run Python commands
-      if: steps.python_archive.outputs.python_archive == 'true'
-      run: |
-        pip3 install virtualenv
     - name: Add custom layer
       if: steps.python_archive.outputs.python_archive == 'true'
       shell: bash
       run: |
+        pip3 install virtualenv
         echo "Preparing archive..."
         bash ./lambda/${{ inputs.sub-path }}/prepare_archive.sh
         cp ./function.zip ./terragrunt/modules/custom/lambda_prerequisite/.
