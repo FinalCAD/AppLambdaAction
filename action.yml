@@ -19,7 +19,7 @@ inputs:
   terraform-app-lambda:
     description: 'terraform app lambda repository'
     default: 'FinalCAD/terraform-app-lambda'
-  terraform-lambda-ref:
+  terraform-app-lambda-ref:
     descrition: 'Ref to use for pulling repo terraform-app-lambda'
     default: 'master'
   gitub-token:
@@ -43,6 +43,9 @@ inputs:
   policies-file:
     description: "Path to lambda policies file"
     default: '.finalcad/lambda-policies.json'
+  pr-number:
+    description: 'Pull rerquest number, empty fo push'
+    default: ''
 runs:
   using: 'composite'
   steps:
@@ -53,7 +56,7 @@ runs:
       with:
         ssh-key: ${{ inputs.github-ssh }}
         repository: ${{ inputs.terraform-lambda-repo }}
-        ref: ${{ inputs.terraform-lambda-ref }}
+        ref: ${{ inputs.terraform-app-lambda-ref }}
         path: 'terragrunt'
     # Setup ssh key
     - name: Add ssh key
