@@ -71,7 +71,7 @@ runs:
         chmod 600 ~/.ssh/id_rsa ~/.ssh/known_hosts
         eval $(ssh-agent)
         ssh-add ~/.ssh/id_rsa
-    - name: Detectr Python archive
+    - name: Detect Python archive
       id: python_archive
       shell: bash
       run: |
@@ -85,6 +85,10 @@ runs:
       uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
+    - name: Run Python commands
+      if: steps.python_archive.outputs.python_archive == 'true'
+      run: |
+        pip3 install virtualenv
     - name: Add custom layer
       if: steps.python_archive.outputs.python_archive == 'true'
       shell: bash
