@@ -65,6 +65,7 @@ runs:
     - name: Add ssh key
       shell: bash
       run: |
+        set -e
         mkdir -p ~/.ssh
         echo "${{ inputs.github-ssh }}" > ~/.ssh/id_rsa
         ssh-keyscan github.com >> ~/.ssh/known_hosts
@@ -89,6 +90,7 @@ runs:
       if: steps.python_archive.outputs.python_archive == 'true'
       shell: bash
       run: |
+        set -e
         pip3 install virtualenv
         echo "Preparing archive..."
         bash ./lambda/${{ inputs.sub-path }}/prepare_archive.sh
@@ -118,6 +120,7 @@ runs:
     - name: Terragrunt apply
       shell: bash
       run: |
+        set -e
         cp ./lambda/${{ inputs.configuration-file }} ./terragrunt/lambda.yaml
         cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
@@ -155,6 +158,7 @@ runs:
       if: inputs.pr-number == ''
       shell: bash
       run: |
+        set -e
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
         export TF_VAR_region_friendly=${{ inputs.region-friendly }}
         export TF_VAR_application_id=${{ inputs.app-name }}
