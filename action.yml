@@ -49,6 +49,9 @@ inputs:
   python-version:
     description: 'Python version to construct python zip'
     default: '3.10'
+  dry-run:
+    description: 'Dry run'
+    default: false
 runs:
   using: 'composite'
   steps:
@@ -116,8 +119,8 @@ runs:
         aws-region: ${{ inputs.aws-region }}
         role-to-assume: ${{ inputs.aws-role }}
         role-session-name: OIDCSession
-    # Apply terragrunt
-    - name: Terragrunt apply
+    # Terragrunt plan
+    - name: Terragrunt plan
       shell: bash
       run: |
         set -e
@@ -155,7 +158,7 @@ runs:
     #Apply terragrunt
     # terragrunt apply -auto-approve
     - name: Terragrunt apply
-      if: inputs.pr-number == ''
+      if: ${{ inputs.pr-number == '' && ! inputs.dry-run }}
       shell: bash
       run: |
         set -e
@@ -163,4 +166,16 @@ runs:
         export TF_VAR_region_friendly=${{ inputs.region-friendly }}
         export TF_VAR_application_id=${{ inputs.app-name }}
         terragrunt init -reconfigure
-        terragrunt plan -out plan
+        terragrunt apply -auto-approve
+    #Apply terragrunt
+    # terragrunt apply -auto-approve
+    - name: Terragrunt apply
+      if: ${{ inputs.pr-number == '' && inputs.dry-run }}
+      shell: bash
+      run: |
+        set -e
+        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
+        export TF_VAR_region_friendly=${{ inputs.region-friendly }}
+        export TF_VAR_application_id=${{ inputs.app-name }}
+        terragrunt init -reconfigure
+        terragrunt plan
