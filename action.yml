@@ -163,9 +163,8 @@ runs:
             body: output
           })
     #Apply terragrunt
-    # terragrunt apply -auto-approve
     - name: Terragrunt apply
-      if: ${{ inputs.pr-number == '' && inputs.dry-run == false }}
+      if: inputs.pr-number == '' && inputs.dry-run == false
       shell: bash
       run: |
         set -e
