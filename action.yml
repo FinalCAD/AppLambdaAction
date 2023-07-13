@@ -4,6 +4,9 @@ inputs:
   app-name:
     description: 'Applcation id'
     required: true
+  suffix:
+    description: 'Suffix for multi lambda in same repository'
+    default: 'default'
   aws-role:
     description: 'Aws role to apply changes'
     required: true
@@ -136,6 +139,7 @@ runs:
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
         export TF_VAR_region_friendly=${{ inputs.region-friendly }}
         export TF_VAR_application_id=${{ inputs.app-name }}
+        export TF_VAR_suffix=${{ inputs.suffix }}
         terragrunt init -reconfigure
         terragrunt plan -out plan
         terragrunt show plan -no-color > ${{ github.workspace }}/terragrunt/plan.txt
@@ -171,5 +175,6 @@ runs:
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
         export TF_VAR_region_friendly=${{ inputs.region-friendly }}
         export TF_VAR_application_id=${{ inputs.app-name }}
+        export TF_VAR_suffix=${{ inputs.suffix }}
         terragrunt init -reconfigure
         terragrunt apply -auto-approve

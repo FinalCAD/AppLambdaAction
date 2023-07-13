@@ -8,6 +8,9 @@ You must call this action for each lambda and each datacenter. Use app-name in c
 ### `app-name`
 [**Required**] Application ID to identify the apps in eks-apps. Should be identical for all resources in the same project.
 
+### `suffix`
+Suffix for multi lambda in same repository, Default : ''
+
 ### `aws-role`
 [**Required**] AWS role allowing Secret manager usage
 
