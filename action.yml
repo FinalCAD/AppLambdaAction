@@ -164,7 +164,7 @@ runs:
           })
     #Apply terragrunt
     - name: Terragrunt apply
-      if: inputs.pr-number == '' && inputs.dry-run == false
+      if: inputs.pr-number == '' && inputs.dry-run == 'false'
       shell: bash
       run: |
         set -e
