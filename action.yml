@@ -7,9 +7,6 @@ inputs:
   aws-role:
     description: 'Aws role to apply changes'
     required: true
-  aws-region:
-    description: 'Aws region'
-    default: 'eu-central-1'
   terraform-version:
     description: 'Terraform version to install.'
     default: 'latest'
@@ -64,6 +61,16 @@ runs:
         repository: ${{ inputs.terraform-app-lambda }}
         ref: ${{ inputs.terraform-app-lambda-ref }}
         path: 'terragrunt'
+    - name: Detect aws region
+      id: aws_region
+      shell: bash
+      run: |
+        set -e
+        case '${{ inputs.region-friendly }}' in
+            'frankfurt') awsregion='eu-central-1';;
+            'tokyo') awsregion='ap-northeast-1';;
+        esac
+        echo "awsregion=${awsregion}" >> $GITHUB_OUTPUT
     # Setup ssh key
     - name: Add ssh key
       shell: bash
@@ -116,7 +123,7 @@ runs:
     - name: Configure AWS credentials for security
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-region: ${{ inputs.aws-region }}
+        aws-region: ${{ step.aws_region.outputs.awsregion }}
         role-to-assume: ${{ inputs.aws-role }}
         role-session-name: OIDCSession
     # Terragrunt plan
@@ -158,7 +165,7 @@ runs:
     #Apply terragrunt
     # terragrunt apply -auto-approve
     - name: Terragrunt apply
-      if: ${{ inputs.pr-number == '' && ! inputs.dry-run }}
+      if: ${{ inputs.pr-number == '' && inputs.dry-run == false }}
       shell: bash
       run: |
         set -e
