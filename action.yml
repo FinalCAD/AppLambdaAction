@@ -22,7 +22,7 @@ inputs:
   terraform-app-lambda-ref:
     descrition: 'Ref to use for pulling repo terraform-app-lambda'
     default: 'master'
-  gitub-token:
+  github-token:
     description: 'Github token to pull package to avoid limit rate'
     default: ''
   github-ssh:
@@ -111,7 +111,7 @@ runs:
       if: inputs.terragrunt-version != 'disabled'
       with:
         terragrunt_version: ${{ inputs.terragrunt-version }}
-        token: ${{ inputs.gitub-token }}
+        token: ${{ inputs.github-token }}
     # Configure aws credentials
     - name: Configure AWS credentials for security
       uses: aws-actions/configure-aws-credentials@v1
