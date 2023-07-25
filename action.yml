@@ -135,7 +135,9 @@ runs:
       run: |
         set -e
         cp ./lambda/${{ inputs.configuration-file }} ./terragrunt/lambda.yaml
-        cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json
+        if [ -f ./lambda/${{ inputs.policies-file }} ]; then
+          cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json
+        fi
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
         export TF_VAR_region_friendly=${{ inputs.region-friendly }}
         export TF_VAR_application_id=${{ inputs.app-name }}
