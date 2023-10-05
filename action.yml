@@ -6,7 +6,7 @@ inputs:
     required: true
   suffix:
     description: 'Suffix for multi lambda in same repository'
-    default: 'default'
+    default: ''
   aws-role:
     description: 'Aws role to apply changes'
     required: true
