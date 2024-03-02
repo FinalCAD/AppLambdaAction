@@ -12,10 +12,10 @@ inputs:
     required: true
   terraform-version:
     description: 'Terraform version to install.'
-    default: 'latest'
+    default: 'v1.5.7'
   terragrunt-version:
     description: 'Terragrunt version to install.'
-    default: 'latest'
+    default: 'v0.55.10'
   terraform-app-lambda:
     description: 'terraform app lambda repository'
     default: 'FinalCAD/terraform-app-lambda'
