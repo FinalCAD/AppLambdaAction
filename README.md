@@ -56,6 +56,9 @@ Python version to construct python zip, only for Package lambda
 ### `dry-run`
 Dry run, will not trigger apply, Default: `false`
 
+### `override-output-file`
+(Optional) Path where to store override content from Terraform output.
+
 ## Usage
 
 ```yaml
