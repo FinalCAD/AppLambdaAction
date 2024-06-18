@@ -37,6 +37,9 @@ inputs:
   sub-path:
     description: 'Subpath in current lambda repository'
     default: ''
+  inject-route-files:
+    description: 'Set to "true" in order to inject route files in to Lambda archive (only available for python_archive)'
+    default: ''
   configuration-file:
     description: "Path to lambda configuration file"
     default: '.finalcad/lambda.yaml'
@@ -73,10 +76,17 @@ runs:
       run: |
         set -e
         case '${{ inputs.region-friendly }}' in
-            'frankfurt') awsregion='eu-central-1';;
-            'tokyo') awsregion='ap-northeast-1';;
+            'frankfurt')
+              awsregion='eu-central-1'
+              region='eu'
+              ;;
+            'tokyo')
+              awsregion='ap-northeast-1'
+              region='ap'
+              ;;
         esac
         echo "awsregion=${awsregion}" >> $GITHUB_OUTPUT
+        echo "region=${region}" >> $GITHUB_OUTPUT
     # Setup ssh key
     - name: Add ssh key
       shell: bash
@@ -104,12 +114,37 @@ runs:
         python-version: ${{ inputs.python-version }}
     - name: Add custom layer
       if: steps.python_archive.outputs.python_archive == 'true'
+      env:
+        APPLAMBDAACTION_INJECT_ROUTE_FILES: ${{ inputs.inject-route-files }}
+        APPLAMBDAACTION_DIR: ${{ github.action_path }}
+        APPLAMBDAACTION_DRY_RUN: ${{ inputs.dry-run }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        REGION: ${{ steps.aws_region.outputs.region }}
+        AWS_REGION: ${{ steps.aws_region.outputs.awsregion }}
       shell: bash
       run: |
         set -e
         pip3 install virtualenv
         echo "Preparing archive..."
         bash ./lambda/${{ inputs.sub-path }}/prepare_archive.sh
+
+        [[ "${APPLAMBDAACTION_INJECT_ROUTE_FILES}" != 'true' ]] || {
+          zip_fullpath="$(readlink -f './lambda/${{ inputs.sub-path }}/function.zip')"
+          [[ -f "${zip_fullpath}" ]] || {
+            echo "Missing archive file '${zip_fullpath}'"
+            exit 1
+          } >&2
+          route_dir="$(mktemp --directory)" &&
+          "${APPLAMBDAACTION_DIR}/fetch-routes.sh" "${route_dir}" &&
+          pushd "${route_dir}" &&
+          zip -ru "${zip_fullpath}" . &&
+          popd
+
+          [[ "${APPLAMBDAACTION_DRY_RUN}" == 'false' ]] || {
+            unzip -l "${zip_fullpath}"
+          }
+        }
+
         mkdir -p ./terragrunt/modules/custom/lambda_prerequisite/
         cp ./lambda/${{ inputs.sub-path }}/function.zip ./terragrunt/modules/custom/lambda_prerequisite/.
     # Setup terraform
