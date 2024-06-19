@@ -115,38 +115,14 @@ runs:
     - name: Add custom layer
       if: steps.python_archive.outputs.python_archive == 'true'
       env:
+        APPLAMBDAACTION_SUB_PATH: ${{ inputs.sub-path }}
         APPLAMBDAACTION_INJECT_ROUTE_FILES: ${{ inputs.inject-route-files }}
-        APPLAMBDAACTION_DIR: ${{ github.action_path }}
         APPLAMBDAACTION_DRY_RUN: ${{ inputs.dry-run }}
         ENVIRONMENT: ${{ inputs.environment }}
         REGION: ${{ steps.aws_region.outputs.region }}
         AWS_REGION: ${{ steps.aws_region.outputs.awsregion }}
       shell: bash
-      run: |
-        set -e
-        pip3 install virtualenv
-        echo "Preparing archive..."
-        bash ./lambda/${{ inputs.sub-path }}/prepare_archive.sh
-
-        [[ "${APPLAMBDAACTION_INJECT_ROUTE_FILES}" != 'true' ]] || {
-          zip_fullpath="$(readlink -f './lambda/${{ inputs.sub-path }}/function.zip')"
-          [[ -f "${zip_fullpath}" ]] || {
-            echo "Missing archive file '${zip_fullpath}'"
-            exit 1
-          } >&2
-          route_dir="$(mktemp --directory)" &&
-          "${APPLAMBDAACTION_DIR}/fetch-routes.sh" "${route_dir}" &&
-          pushd "${route_dir}" &&
-          zip -ru "${zip_fullpath}" . &&
-          popd
-
-          [[ "${APPLAMBDAACTION_DRY_RUN}" == 'false' ]] || {
-            unzip -l "${zip_fullpath}"
-          }
-        }
-
-        mkdir -p ./terragrunt/modules/custom/lambda_prerequisite/
-        cp ./lambda/${{ inputs.sub-path }}/function.zip ./terragrunt/modules/custom/lambda_prerequisite/.
+      run: ${{ github.action_path }}/add-custom-layer.sh
     # Setup terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v2
@@ -171,22 +147,22 @@ runs:
     - name: Terragrunt plan
       shell: bash
       run: |
-        set -e
-        cp ./lambda/${{ inputs.configuration-file }} ./terragrunt/lambda.yaml
+        cp ./lambda/${{ inputs.configuration-file }} ./terragrunt/lambda.yaml || exit $?
+
         if [ -f ./lambda/${{ inputs.policies-file }} ]; then
-          cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json
+          cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json || exit $?
         fi
-        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
-        export TF_VAR_region_friendly=${{ inputs.region-friendly }}
-        export TF_VAR_application_id=${{ inputs.app-name }}
-        export TF_VAR_suffix=${{ inputs.suffix }}
-        terragrunt init -reconfigure
-        terragrunt plan -out plan
-        terragrunt show plan -no-color > ${{ github.workspace }}/terragrunt/plan.txt
-      continue-on-error: true
+        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
+        export TF_VAR_region_friendly=${{ inputs.region-friendly }} &&
+        export TF_VAR_application_id=${{ inputs.app-name }} &&
+        export TF_VAR_suffix=${{ inputs.suffix }} &&
+        terragrunt init -reconfigure &&
+        terragrunt plan -out plan &&
+        terragrunt show plan -no-color > ${{ github.workspace }}/terragrunt/plan.txt &&
+        true || exit $?
     # Comment on pr
     - uses: actions/github-script@v6
-      if: inputs.pr-number != ''
+      if: inputs.pr-number != '' && !cancelled()
       env:
         PLAN: ${{ steps.plan.outputs.show }}
       with:
@@ -211,18 +187,17 @@ runs:
       if: inputs.pr-number == '' && inputs.dry-run == 'false'
       shell: bash
       run: |
-        set -e
-
-        output_argocd_override_path="$(readlink -f '${{ inputs.override-output-file }}' || true)"
-
-        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda
-        export TF_VAR_region_friendly=${{ inputs.region-friendly }}
-        export TF_VAR_application_id=${{ inputs.app-name }}
-        export TF_VAR_suffix=${{ inputs.suffix }}
-        terragrunt init -reconfigure
-        terragrunt apply -auto-approve
+        output_argocd_override_path="$(readlink -f '${{ inputs.override-output-file }}' || true)" &&
+        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
+        export TF_VAR_region_friendly=${{ inputs.region-friendly }} &&
+        export TF_VAR_application_id=${{ inputs.app-name }} &&
+        export TF_VAR_suffix=${{ inputs.suffix }} &&
+        terragrunt init -reconfigure &&
+        terragrunt apply -auto-approve &&
+        true || exit $?
 
         [[ -z "${output_argocd_override_path}" ]] || {
           mkdir -p "$(dirname "${output_argocd_override_path}")" &&
-          terragrunt output -json 'argocd_override' > "${output_argocd_override_path}"
+          terragrunt output -json 'argocd_override' > "${output_argocd_override_path}" &&
+          true || exit $?
         }
