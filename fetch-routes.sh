@@ -6,6 +6,12 @@ basedir="$(dirname "$(readlink -f "${BASH_SOURCE}")")" || {
   return 1
 } >&2
 
+. "${basedir}/common.shrc" || {
+  echo 'Unable to load common'
+  return 1
+} >&2
+
+
 function main() {
   local rc=0
 
@@ -15,24 +21,8 @@ function main() {
     rc=1
   } >&2
 
-  local env_var=''
-  for env_var in ENVIRONMENT REGION; do
-    local env_value="${!env_var}"
-    if [[ ! -z "${env_value}" ]]; then
-      echo "[INFO ] '${env_var}' = '${env_value}'"
-    else
-      echo "[ERROR] Missing environment variable '${env_var}'" >&2
-      rc=1
-    fi
-  done
-
-  local command=''
-  for command in aws jq base64; do
-    type -t "${command}" >/dev/null 2>&1 || {
-      echo "[ERROR] Missing command '${command}'"
-      rc=1
-    } >&2
-  done
+  common.check.var ENVIRONMENT REGION || rc=$?
+  common.check.bin aws jq base64 || rc=$?
 
   [[ $rc == 0 ]] || return $rc
 
