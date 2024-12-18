@@ -153,7 +153,6 @@ runs:
           cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json || exit $?
         fi
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
-        export TF_VAR_region_friendly=${{ inputs.region-friendly }} &&
         export TF_VAR_application_id=${{ inputs.app-name }} &&
         export TF_VAR_suffix=${{ inputs.suffix }} &&
         terragrunt init -reconfigure &&
@@ -189,7 +188,6 @@ runs:
       run: |
         output_argocd_override_path="$(readlink -f '${{ inputs.override-output-file }}' || true)" &&
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
-        export TF_VAR_region_friendly=${{ inputs.region-friendly }} &&
         export TF_VAR_application_id=${{ inputs.app-name }} &&
         export TF_VAR_suffix=${{ inputs.suffix }} &&
         terragrunt init -reconfigure &&
