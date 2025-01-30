@@ -3,13 +3,13 @@ description: 'Deploy lambda with terraform'
 inputs:
   app-name:
     description: 'Applcation id'
-    required: true
+    default: ''
   suffix:
     description: 'Suffix for multi lambda in same repository'
     default: ''
   aws-role:
     description: 'Aws role to apply changes'
-    required: true
+    default: ''
   terraform-version:
     description: 'Terraform version to install.'
     default: '1.9.7'
@@ -27,10 +27,10 @@ inputs:
     default: ''
   github-ssh:
     description: 'Github ssh key to pull terragrunt from github api'
-    required: true
+    default: ''
   environment:
     description: 'Finalcad environment: production, staging, sandbox'
-    require: true
+    default: ''
   region-friendly:
     description: 'Finalcad region: frankfurt or tokyo'
     default: 'frankfurt'
@@ -54,148 +54,15 @@ inputs:
     default: '3.10'
   dry-run:
     description: 'Dry run'
-    default: false
+    default: ''
   override-output-file:
     description: '(Optional) Path where to store override content from Terraform output.'
     default: ''
 runs:
   using: 'composite'
   steps:
-    - uses: actions/checkout@v3
-      with:
-        path: 'lambda'
-    - uses: actions/checkout@v3
-      with:
-        ssh-key: ${{ inputs.github-ssh }}
-        repository: ${{ inputs.terraform-app-lambda }}
-        ref: ${{ inputs.terraform-app-lambda-ref }}
-        path: 'terragrunt'
-    - name: Detect aws region
-      id: aws_region
+    - name: Deprecated version of FinalCAD/AppLambdaAction
       shell: bash
       run: |
-        set -e
-        case '${{ inputs.region-friendly }}' in
-            'frankfurt')
-              awsregion='eu-central-1'
-              region='eu'
-              ;;
-            'tokyo')
-              awsregion='ap-northeast-1'
-              region='ap'
-              ;;
-        esac
-        echo "awsregion=${awsregion}" >> $GITHUB_OUTPUT
-        echo "region=${region}" >> $GITHUB_OUTPUT
-    # Setup ssh key
-    - name: Add ssh key
-      shell: bash
-      run: |
-        set -e
-        mkdir -p ~/.ssh
-        echo "${{ inputs.github-ssh }}" > ~/.ssh/id_rsa
-        ssh-keyscan github.com >> ~/.ssh/known_hosts
-        chmod 600 ~/.ssh/id_rsa ~/.ssh/known_hosts
-        eval $(ssh-agent)
-        ssh-add ~/.ssh/id_rsa
-    - name: Detect Python archive
-      id: python_archive
-      shell: bash
-      run: |
-        if [ -f ./lambda/${{ inputs.sub-path }}/prepare_archive.sh ]; then
-          echo "python_archive=true" >> $GITHUB_OUTPUT
-        else
-          echo "python_archive=false" >> $GITHUB_OUTPUT
-        fi
-    - name: Set up Python
-      if: steps.python_archive.outputs.python_archive == 'true'
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ inputs.python-version }}
-    - name: Add custom layer
-      if: steps.python_archive.outputs.python_archive == 'true'
-      env:
-        APPLAMBDAACTION_SUB_PATH: ${{ inputs.sub-path }}
-        APPLAMBDAACTION_INJECT_ROUTE_FILES: ${{ inputs.inject-route-files }}
-        APPLAMBDAACTION_DRY_RUN: ${{ inputs.dry-run }}
-        ENVIRONMENT: ${{ inputs.environment }}
-        REGION: ${{ steps.aws_region.outputs.region }}
-        AWS_REGION: ${{ steps.aws_region.outputs.awsregion }}
-      shell: bash
-      run: ${{ github.action_path }}/add-custom-layer.sh
-    # Setup terraform
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: ${{ inputs.terraform-version }}
-        terraform_wrapper: false
-    # Setup terragrunt
-    - name: Terragrunt Binary Installer Action
-      uses: autero1/action-terragrunt@v3
-      if: inputs.terragrunt-version != 'disabled'
-      with:
-        terragrunt-version: ${{ inputs.terragrunt-version }}
-        token: ${{ inputs.github-token }}
-    # Configure aws credentials
-    - name: Configure AWS credentials for security
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-region: ${{ steps.aws_region.outputs.awsregion }}
-        role-to-assume: ${{ inputs.aws-role }}
-        role-session-name: OIDCSession
-    # Terragrunt plan
-    - name: Terragrunt plan
-      shell: bash
-      run: |
-        cp ./lambda/${{ inputs.configuration-file }} ./terragrunt/lambda.yaml || exit $?
-
-        if [ -f ./lambda/${{ inputs.policies-file }} ]; then
-          cp ./lambda/${{ inputs.policies-file }} ./terragrunt/lambda-policies.json || exit $?
-        fi
-        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
-        export TF_VAR_application_id=${{ inputs.app-name }} &&
-        export TF_VAR_suffix=${{ inputs.suffix }} &&
-        terragrunt init -reconfigure &&
-        terragrunt plan -out plan &&
-        terragrunt show plan -no-color > ${{ github.workspace }}/terragrunt/plan.txt &&
-        true || exit $?
-    # Comment on pr
-    - uses: actions/github-script@v6
-      if: inputs.pr-number != '' && !cancelled()
-      env:
-        PLAN: ${{ steps.plan.outputs.show }}
-      with:
-        script: |
-          const fs = require('fs')
-          const data = fs.readFileSync('${{ github.workspace }}/terragrunt/plan.txt')
-          const output = `#### Terraform Plan : \`${{ steps.plan.outcome }}\`
-          <details><summary>Show Plan</summary>\n
-          \`\`\`terraform\n
-          ${data}
-          \`\`\`\n
-          </details>
-          *Pushed by: @${{ github.actor }}`;
-          github.rest.issues.createComment({
-            issue_number: ${{ inputs.pr-number }},
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: output
-          })
-    #Apply terragrunt
-    - name: Terragrunt apply
-      if: inputs.pr-number == '' && inputs.dry-run == 'false'
-      shell: bash
-      run: |
-        output_argocd_override_path="$(readlink -f '${{ inputs.override-output-file }}' || true)" &&
-        cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
-        export TF_VAR_application_id=${{ inputs.app-name }} &&
-        export TF_VAR_suffix=${{ inputs.suffix }} &&
-        terragrunt init -reconfigure &&
-        terragrunt apply -auto-approve &&
-        true || exit $?
-
-        [[ -z "${output_argocd_override_path}" ]] || {
-          mkdir -p "$(dirname "${output_argocd_override_path}")" &&
-          terragrunt output -json 'argocd_override' > "${output_argocd_override_path}" &&
-          true || exit $?
-        }
+        echo '::error title=Deprecated version of FinalCAD/AppLambdaAction::This version of FinalCAD/AppLambdaAction is deprecated use `v1` instead.'
+        exit 1
