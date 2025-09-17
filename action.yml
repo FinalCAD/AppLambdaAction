@@ -20,7 +20,13 @@ inputs:
     description: 'terraform app lambda repository'
     default: 'FinalCAD/terraform-app-lambda'
   terraform-app-lambda-ref:
-    descrition: 'Ref to use for pulling repo terraform-app-lambda'
+    description: 'Ref to use for pulling repo terraform-app-lambda'
+    default: 'master'
+  deployment-descriptors-repo:
+    description: 'Repository to push deployment descriptors'
+    default: 'FinalCAD/infrastructure-deployment-descriptors'
+  deployment-descriptors-ref:
+    description: 'Git ref to use for pushing deployment descriptors'
     default: 'master'
   github-token:
     description: 'Github token to pull package to avoid limit rate'
@@ -70,6 +76,13 @@ runs:
         repository: ${{ inputs.terraform-app-lambda }}
         ref: ${{ inputs.terraform-app-lambda-ref }}
         path: 'terragrunt'
+    - name: Checkout deployment descriptor repository
+      uses: actions/checkout@v3
+      with:
+        ssh-key: ${{ inputs.github-ssh }}
+        repository: "${{ inputs.deployment-descriptors-repo }}"
+        ref: ${{ inputs.deployment-descriptors-ref }}
+        path: 'deployment-descriptors'
     - name: Detect aws region
       id: aws_region
       shell: bash
@@ -123,6 +136,24 @@ runs:
         AWS_REGION: ${{ steps.aws_region.outputs.awsregion }}
       shell: bash
       run: ${{ github.action_path }}/add-custom-layer.sh
+    # Publish descriptor
+    - name: Publish descriptor
+      if: inputs.pr-number == ''
+      shell: bash
+      run: "${GITHUB_ACTION_PATH}/bin/publish-descriptor.sh"
+      env:
+        DEPLOYMENT_DESCRIPTOR_FILE: ./lambda/${{ inputs.configuration-file }}
+        DEPLOYMENT_DESCRIPTOR_GIT_REPOSITORY: ./deployment-descriptors
+        DEPLOYMENT_DESCRIPTOR_METADATA_INJECT_ROUTE_FILES: ${{ inputs.inject-route-files }}
+        DEPLOYMENT_DESCRIPTOR_METADATA_IS_ARCHIVE: ${{ steps.python_archive.outputs.python_archive }}
+        DEPLOYMENT_DESCRIPTOR_POLICIES_FILE: ./lambda/${{ inputs.policies-file }}
+        FINALCAD_ENVIRONMENT: ${{ inputs.environment }}
+        FINALCAD_REGION_FRIENDLY: ${{ inputs.region-friendly }}
+        MICROSERVICE_GIT_REPOSITORY: ./lambda
+        TERRAFORM_GIT_REPOSITORY: ./terragrunt
+        TF_VAR_application_id: ${{ inputs.app-name }}
+        TF_VAR_application_suffix: ${{ inputs.suffix }}
+        DRY_RUN: ${{ inputs.dry-run }}
     # Setup terraform
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
