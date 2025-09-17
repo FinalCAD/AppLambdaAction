@@ -217,9 +217,9 @@ function main.exec() {
 
   if [[ -f "${DEPLOYMENT_DESCRIPTOR_POLICIES_FILE}" ]]; then
     echo "[INFO] Copy policies file"
-    cp "${DEPLOYMENT_DESCRIPTOR_POLICIES_FILE}" "${descriptor_directory}/policies.json" || {
+    cp "${DEPLOYMENT_DESCRIPTOR_POLICIES_FILE}" "${descriptor_directory}/application.policies.json" || {
       rc=$?
-      echo "[ERROR] Cannot copy policies file '${DEPLOYMENT_DESCRIPTOR_POLICIES_FILE}' to '${descriptor_directory}/policies.json'" >&2
+      echo "[ERROR] Cannot copy policies file '${DEPLOYMENT_DESCRIPTOR_POLICIES_FILE}' to '${descriptor_directory}/application.policies.json'" >&2
       return $rc
     }
   fi
