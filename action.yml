@@ -185,7 +185,7 @@ runs:
         fi
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
         export TF_VAR_application_id=${{ inputs.app-name }} &&
-        export TF_VAR_suffix=${{ inputs.suffix }} &&
+        export TF_VAR_application_suffix=${{ inputs.suffix }} &&
         terragrunt init -reconfigure &&
         terragrunt plan -out plan &&
         terragrunt show plan -no-color > ${{ github.workspace }}/terragrunt/plan.txt &&
@@ -220,7 +220,7 @@ runs:
         output_argocd_override_path="$(readlink -f '${{ inputs.override-output-file }}' || true)" &&
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
         export TF_VAR_application_id=${{ inputs.app-name }} &&
-        export TF_VAR_suffix=${{ inputs.suffix }} &&
+        export TF_VAR_application_suffix=${{ inputs.suffix }} &&
         terragrunt init -reconfigure &&
         terragrunt apply -auto-approve &&
         true || exit $?
