@@ -262,3 +262,10 @@ runs:
           terragrunt output -json 'argocd_override' > "${output_argocd_override_path}" &&
           true || exit $?
         }
+    - name: Clear local repositories
+      shell: bash
+      run: |
+        echo '::group::Clear local repositories'
+        rm -rf './terragrunt'
+        rm -rf './deployment-descriptors'
+        echo '::endgroup::'
