@@ -36,7 +36,7 @@ inputs:
     required: true
   environment:
     description: 'Finalcad environment: production, staging, sandbox'
-    require: true
+    required: true
   region-friendly:
     description: 'Finalcad region: frankfurt or tokyo'
     default: 'frankfurt'
@@ -60,7 +60,7 @@ inputs:
     default: '3.x'
   dry-run:
     description: 'Dry run'
-    default: false
+    default: 'false'
   override-output-file:
     description: '(Optional) Path where to store override content from Terraform output.'
     default: ''
@@ -123,7 +123,7 @@ runs:
       shell: bash
       run: |
         set -e
-        cue vet ./terragrunt/application.yaml ./terragrunt/application.cue
+        cue vet ./terragrunt/lambda.yaml ./terragrunt/lambda.cue
     - name: Checkout deployment descriptor repository
       uses: actions/checkout@v7
       with:
