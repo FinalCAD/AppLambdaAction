@@ -21,13 +21,13 @@ inputs:
     default: 'git@gitlab.com:orisha-group/construction/advae/common/infrastructure/terraform-app-lambda.git'
   terraform-app-lambda-ref:
     description: 'Ref to use for pulling repo terraform-app-lambda'
-    default: 'master'
+    default: ''
   deployment-descriptors-git-url:
     description: 'Repository to push deployment descriptors'
     default: 'git@gitlab.com:orisha-group/construction/advae/finalcad-one/infrastructure/infrastructure-deployment-descriptors.git'
   deployment-descriptors-ref:
     description: 'Git ref to use for pushing deployment descriptors'
-    default: 'master'
+    default: ''
   github-token:
     description: 'Github token to pull package to avoid limit rate'
     default: ''
@@ -87,13 +87,17 @@ runs:
       shell: bash
       run: |
         echo '::group::Checkout terragrunt repository'
-        git clone \
-          --progress \
-          --branch '${{ inputs.terraform-app-lambda-ref }}' \
+        clone_args=(
+          --progress
+        )
+        [[ -z '${{ inputs.terraform-app-lambda-ref }}' ]] || clone_args+=(--branch '${{ inputs.terraform-app-lambda-ref }}')
+        clone_args+=(
           --depth 1 \
           --no-tags \
-          '${{ inputs.terraform-app-lambda-git-url }}' \
+          '${{ inputs.terraform-app-lambda-git-url }}'
           'terragrunt'
+        )
+        git clone "${clone_args[@]}"
         echo '::endgroup::'
     - name: Copy application files
       shell: bash
@@ -128,13 +132,17 @@ runs:
       shell: bash
       run: |
         echo '::group::Checkout deployment descriptor repository'
-        git clone \
-          --progress \
-          --branch '${{ inputs.deployment-descriptors-ref }}' \
-          --depth 1 \
-          --no-tags \
-          '${{ inputs.deployment-descriptors-git-url }}' \
+        clone_args=(
+          --progress
+        )
+        [[ -z '${{ inputs.deployment-descriptors-ref }}' ]] || clone_args+=(--branch '${{ inputs.deployment-descriptors-ref }}')
+        clone_args+=(
+          --depth 1
+          --no-tags
+          '${{ inputs.deployment-descriptors-git-url }}'
           'deployment-descriptors'
+        )
+        git clone "${clone_args[@]}"
         echo '::endgroup::'
     - name: Detect aws region
       id: aws_region
