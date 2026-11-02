@@ -262,7 +262,9 @@ runs:
       if: inputs.pr-number == '' && inputs.dry-run == 'false'
       shell: bash
       run: |
-        output_argocd_override_path="$(readlink -f '${{ inputs.override-output-file }}' || true)" &&
+        output_argocd_override_path='${{ inputs.override-output-file }}'
+        [[ -z "${output_argocd_override_path}" ]] || output_argocd_override_path="$(readlink -f '${{ inputs.override-output-file }}' || true)" || exit $?
+
         cd ./terragrunt/${{ inputs.environment }}/${{ inputs.region-friendly }}/lambda &&
         export TF_VAR_application_id=${{ inputs.app-name }} &&
         export TF_VAR_application_suffix=${{ inputs.suffix }} &&
@@ -271,6 +273,7 @@ runs:
         true || exit $?
 
         [[ -z "${output_argocd_override_path}" ]] || {
+          echo "Writing ArgoCD override output to '${output_argocd_override_path}'" &&
           mkdir -p "$(dirname "${output_argocd_override_path}")" &&
           terragrunt output -json 'argocd_override' > "${output_argocd_override_path}" &&
           true || exit $?
